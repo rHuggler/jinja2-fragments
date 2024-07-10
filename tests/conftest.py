@@ -19,6 +19,7 @@ from jinja2_fragments.sanic import render as sanic_render
 
 NAME = "Guido"
 LUCKY_NUMBER = "42"
+RESULT = "Saved!"
 
 
 @pytest.fixture(scope="session")
@@ -209,6 +210,25 @@ def fastapi_app():
             block_name="inner",
         )
 
+    @_app.get("/nested_content_oob")
+    async def nested_content_oob(request: fastapi.requests.Request):
+        """Decorator wraps around route method and includes both `block_name`
+        plus `oob_blocks` which are passed to the template. As a result, both
+        `content` and `oob_update` will be rendered.
+        """
+        page_to_render = "nested_blocks_and_variables_with_oob.html.jinja2"
+        return templates.TemplateResponse(
+            page_to_render,
+            {
+                "request": request,
+                "name": NAME,
+                "lucky_number": LUCKY_NUMBER,
+                "result": RESULT,
+            },
+            block_name="content",
+            oob_blocks=["oob_update"],
+        )
+
     @_app.get("/nested_inner_html_response_class", response_class=HTMLResponse)
     async def nested_inner_html_response_class(request: fastapi.requests.Request):
         """Decorator wraps around route method with
@@ -228,6 +248,17 @@ def fastapi_app():
         """Decorator wraps around route method and includes an unexisting block name."""
         return templates.TemplateResponse(
             "simple_page.html.jinja2", {"request": request}, block_name="invalid_block"
+        )
+
+    @_app.get("/invalid_oob_block")
+    async def invalid_oob_block(request: fastapi.requests.Request):
+        """Decorator wraps around route method and includes an
+        unexisting out-of-band block name."""
+        return templates.TemplateResponse(
+            "simple_page.html.jinja2",
+            {"request": request},
+            block_name="content",
+            oob_blocks=["invalid_oob_block"],
         )
 
     return _app

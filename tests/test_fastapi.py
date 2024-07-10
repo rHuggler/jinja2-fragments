@@ -53,6 +53,17 @@ class TestFastAPIRenderBlock:
         html = re.sub(r"[\s\"]*", "", html)
         assert html == response_text
 
+    def test_nested_content_with_oob(
+        self,
+        fastapi_client,
+        get_html,
+    ):
+        response = fastapi_client.get("/nested_content_oob")
+        response_text = re.sub(r"[\s\"]*", "", response.text).replace("\\n", "")
+        html = get_html("nested_blocks_and_variables_content_with_oob.html")
+        html = re.sub(r"[\s\"]*", "", html)
+        assert html == response_text
+
     def test_nested_inner_html_response_class(
         self,
         fastapi_client,
@@ -70,4 +81,11 @@ class TestFastAPIRenderBlock:
             fastapi_client.get("/invalid_block")
 
         assert exc.value.block_name == "invalid_block"
+        assert exc.value.template_name == "simple_page.html.jinja2"
+
+    def test_oob_exception(self, fastapi_client):
+        with pytest.raises(BlockNotFoundError) as exc:
+            fastapi_client.get("/invalid_oob_block")
+
+        assert exc.value.block_name == "invalid_oob_block"
         assert exc.value.template_name == "simple_page.html.jinja2"
