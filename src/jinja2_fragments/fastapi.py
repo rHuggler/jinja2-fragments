@@ -1,3 +1,4 @@
+# type: ignore
 import typing
 
 try:
@@ -30,18 +31,24 @@ class Jinja2Blocks(Jinja2Templates):
         background: typing.Optional[BackgroundTask] = None,
         *,
         block_name: typing.Optional[str] = None,
+        oob_blocks: list[str] = [],
     ) -> Response:
         if "request" not in context:
             raise ValueError('context must include a "request" key')
         template = self.get_template(name)
 
         if block_name:
-            content = render_block(
-                self.env,
-                name,
-                block_name,
-                context,
-            )
+            if len(oob_blocks):
+                content = self._render_multiple_blocks(
+                    name, context, blocks=[block_name, *oob_blocks]
+                )
+            else:
+                content = render_block(
+                    self.env,
+                    name,
+                    block_name,
+                    context,
+                )
             return HTMLResponse(
                 content=content,
                 status_code=status_code,
@@ -57,3 +64,17 @@ class Jinja2Blocks(Jinja2Templates):
             media_type=media_type,
             background=background,
         )
+
+    def _render_multiple_blocks(
+        self, name: str, context: typing.Dict[str, typing.Any], *, blocks: list[str]
+    ) -> str:
+        content_list = []
+        for block_name in blocks:
+            content = render_block(
+                self.env,
+                name,
+                block_name,
+                context,
+            )
+            content_list.append(content)
+        return "".join(content_list)
